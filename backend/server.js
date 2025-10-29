@@ -2,11 +2,11 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const jwt = require('jsonwebtoken');
 const { ValidationError, UniqueConstraintError, DatabaseError } = require('sequelize');
 const logger = require('./src/utils/logger');
 const { sequelize } = require('./src/models');
 const { loginRateLimiter } = require('./src/middleware/rateLimiters');
+const authenticateJWT = require('./src/middleware/authenticate');
 
 // Routes
 const publicRoutes = require('./src/routes/public');
@@ -72,30 +72,6 @@ app.use(auditMiddleware);
 
 // Health endpoint (tvoj check traži string "ok")
 app.get('/health', (_req, res) => res.send('ok'));
-
-const authenticateJWT = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({ error: 'Authorization header missing' });
-  }
-
-  const token = authHeader.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ error: 'Invalid authorization header format' });
-  }
-
-  if (!process.env.JWT_SECRET) {
-    return res.status(500).json({ error: 'JWT secret is not configured' });
-  }
-
-  try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = payload;
-    return next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
-  }
-};
 
 // API routes
 app.use('/api/public', publicRoutes);

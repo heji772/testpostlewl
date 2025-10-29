@@ -1,8 +1,9 @@
 const express = require('express');
-const { recordEvent } = require('../services/analyticsService');
+const { recordEvent, getOverview } = require('../services/analyticsService');
 const { validateAnalyticsPayload } = require('../utils/validation');
 const { analyticsRateLimiter } = require('../middleware/rateLimiters');
 const auditLogger = require('../middleware/auditLogger');
+const authenticate = require('../middleware/authenticate');
 
 const router = express.Router();
 
@@ -22,6 +23,15 @@ router.post('/track', analyticsRateLimiter, auditLogger('analytics:track'), asyn
       res.status(400).json({ success: false, error: error.message });
       return;
     }
+    next(error);
+  }
+});
+
+router.get('/overview', authenticate, auditLogger('analytics:overview'), async (req, res, next) => {
+  try {
+    const overview = await getOverview();
+    res.json(overview);
+  } catch (error) {
     next(error);
   }
 });
