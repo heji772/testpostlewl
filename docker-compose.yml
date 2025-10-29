@@ -1,0 +1,87 @@
+services:
+  database:
+    image: postgres:16
+    container_name: phishing-coupon-platform-database-1
+    environment:
+      POSTGRES_USER: phishuser
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: phishguard
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - database-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U phishuser -d phishguard"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+    depends_on:
+      database:
+        condition: service_healthy
+    expose:
+      - "5000"
+    networks:
+      - backend-network
+      - database-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    expose:
+      - "3000"
+    networks:
+      - frontend-network
+    restart: unless-stopped
+
+  admin-panel:
+    build: ./admin-panel
+    expose:
+      - "3001"
+    networks:
+      - frontend-network
+    restart: unless-stopped
+
+  nginx:
+    build: ./nginx
+    ports:
+      - "8080:80"
+      - "8443:443"
+    depends_on:
+      - backend
+      - frontend
+      - admin-panel
+    networks:
+      - frontend-network
+      - backend-network
+    restart: unless-stopped
+
+networks:
+  frontend-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${SUBNET:-172.20.0.0/24}
+  backend-network:
+    driver: bridge
+  database-network:
+    driver: bridge
+
+volumes:
+  postgres-data:

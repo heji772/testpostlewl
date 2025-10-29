@@ -1,0 +1,349 @@
+# 🎯 PhishGuard Coupon Platform
+
+**Security Awareness Training Tool** - Realistic coupon aggregator phishing simulation
+
+⚠️ **WARNING**: Use only for authorized security training purposes!
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Docker & Docker Compose
+- 4GB RAM minimum
+- 10GB free disk space
+
+### Installation
+
+```bash
+# 1. Clone/Extract project
+cd phishing-coupon-platform
+
+# 2. Setup environment
+cp .env.example .env
+nano .env  # Edit values below
+
+# 3. Generate encryption key and JWT secret
+openssl rand -hex 32      # Copy to ENCRYPTION_KEY
+openssl rand -base64 32   # Copy to JWT_SECRET
+
+# 4. Run setup
+chmod +x scripts/*.sh
+bash scripts/setup.sh
+```
+
+### Required .env Values
+
+Copy `.env.example` to `.env` and update every placeholder:
+
+```env
+# Database
+DATABASE_URL=postgres://phishuser:YOUR_DB_PASSWORD@database:5432/phishguard
+DB_PASSWORD=YOUR_DB_PASSWORD
+
+# Admin login
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=YourStrongPassword123!
+
+# Security keys (generate new ones for every deployment)
+ENCRYPTION_KEY=64_HEX_CHARACTERS
+JWT_SECRET=BASE64_SECRET
+
+# Network (change only if 172.20.0.0/24 conflicts on your host)
+SUBNET=172.20.0.0/24
+```
+
+Generate fresh secrets:
+
+```bash
+openssl rand -hex 32      # → ENCRYPTION_KEY (64 hex chars)
+openssl rand -base64 32   # → JWT_SECRET
+```
+
+> **Note:** If you prefer separate DB settings, `.env.example` also includes
+> `DB_HOST`, `DB_PORT`, `DB_NAME`, and `DB_USER`. Keep them in sync with
+> `DATABASE_URL`.
+
+### Access Points
+
+After running `bash scripts/setup.sh`:
+
+- **🌐 Frontend**: `https://localhost:8443` (Port 8443)
+- **🔐 Admin Panel**: `https://localhost:8443/admin` (Port 8443)
+- **HTTP Alternative**: `http://localhost:8080` (Port 8080)
+
+Default admin credentials:
+- Username: `admin`
+- Password: (from `.env` ADMIN_PASSWORD)
+
+---
+
+## 📊 Features
+
+### Frontend (Public-Facing)
+- ✅ Realistic coupon website design
+- ✅ Phishing data collection forms
+- ✅ Analytics tracking (clicks, views, submissions)
+- ✅ Error messages to encourage re-submission
+- ✅ Educational popup after 3+ attempts
+
+### Backend
+- ✅ RESTful API
+- ✅ PostgreSQL database with encryption
+- ✅ Rate limiting
+- ✅ Audit logging
+
+### Admin Panel
+- ✅ Login with authentication
+- ✅ View collected victim data
+- ✅ Statistics dashboard
+- ✅ Coupon management
+- ✅ Data export (CSV)
+
+---
+
+## 🐳 Docker Commands
+
+```bash
+# Start all services
+bash scripts/start.sh
+
+# Stop all services
+bash scripts/stop.sh
+
+# View logs
+docker-compose logs -f
+
+# Check status
+docker-compose ps
+
+# Restart specific service
+docker-compose restart backend
+
+# Rebuild after code changes
+docker-compose up --build -d
+```
+
+---
+
+## 🔧 Troubleshooting
+
+### Problem: Port 8080/8443 already in use
+
+```bash
+# Check what's using the ports
+sudo lsof -i :8080
+sudo lsof -i :8443
+
+# Stop the conflicting service or change ports in docker-compose.yml
+```
+
+### Problem: SSL Certificate Warning
+
+**This is normal for self-signed certificates!**
+
+- Click "Advanced" → "Proceed to localhost (unsafe)" in browser
+- Or add exception for localhost
+
+### Problem: Cannot connect to database
+
+```bash
+# Check database logs
+docker-compose logs database
+
+# Restart database
+docker-compose restart database
+
+# If persistent, wipe and recreate:
+docker-compose down -v
+bash scripts/setup.sh
+```
+
+### Problem: Admin login fails
+
+Check `.env` file:
+```bash
+cat .env | grep ADMIN_PASSWORD
+```
+
+Make sure password matches what you're entering.
+
+---
+
+## 📁 Project Structure
+
+```
+phishing-coupon-platform/
+├── backend/              # Node.js API
+│   ├── src/
+│   │   ├── routes/      # API endpoints
+│   │   ├── config/      # Database config
+│   │   └── utils/       # Utilities
+│   └── Dockerfile
+├── frontend/             # React public site
+│   ├── src/
+│   │   ├── pages/       # Page components
+│   │   └── styles/      # CSS files
+│   └── Dockerfile
+├── admin-panel/          # React admin dashboard
+│   └── src/
+├── database/             # PostgreSQL
+│   └── init.sql         # Database schema
+├── nginx/                # Reverse proxy
+│   └── nginx.conf
+├── scripts/              # Helper scripts
+└── docker-compose.yml    # Docker orchestration
+```
+
+---
+
+## 🎯 Usage Guide
+
+### Adding Real Coupons
+
+1. Login to admin panel
+2. Navigate to "Coupons" section
+3. Click "Add Coupon"
+4. Fill in:
+   - Title: "Sinsay 20% popust"
+   - Brand: "Sinsay"
+   - Category: "Moda"
+   - Discount: "20% na sve artikle"
+   - Type: **REAL**
+   - URL: `https://kuplio.hr/kuponi/sinsay`
+5. Save
+
+### Adding Phishing Coupons
+
+Same as above, but:
+- Type: **PHISHING**
+- Leave URL empty (will show data collection form)
+
+### Viewing Collected Data
+
+1. Login to admin panel
+2. Go to "Victims" tab
+3. View all submissions
+4. Export to CSV for analysis
+
+---
+
+## 🔐 Security Notes
+
+**This tool collects sensitive data. Always:**
+
+- ✅ Use on isolated network (no internet access)
+- ✅ Enable auto-delete (30 days)
+- ✅ Encrypt all PII
+- ✅ Get proper authorization
+- ✅ Have incident response plan
+
+**Network Isolation:**
+
+The Docker setup uses 3 isolated networks:
+- `frontend-network`: External-facing
+- `backend-network`: Internal only
+- `database-network`: Database only (no external access)
+
+Database is NOT exposed to external network!
+
+---
+
+## 📋 Common Tasks
+
+### Backup Database
+
+```bash
+bash scripts/backup.sh
+```
+
+Backup saved to: `database/backups/backup_YYYYMMDD_HHMMSS.sql`
+
+### View Real-Time Logs
+
+```bash
+# All services
+docker-compose logs -f
+
+# Specific service
+docker-compose logs -f backend
+docker-compose logs -f frontend
+```
+
+### Reset Everything
+
+```bash
+docker-compose down -v
+rm -rf database/backups/*
+bash scripts/setup.sh
+```
+
+⚠️ **This deletes ALL data!**
+
+---
+
+## 🆘 Support
+
+### Check Service Health
+
+```bash
+# Backend health check
+curl http://localhost:5000/health
+
+# Check all containers
+docker-compose ps
+```
+
+### Common Error Messages
+
+**"Cannot connect to Docker daemon"**
+```bash
+# Start Docker
+sudo systemctl start docker
+
+# Or if using Docker Desktop, open the app
+```
+
+**"Address already in use"**
+```bash
+# Change ports in docker-compose.yml:
+ports:
+  - "8090:80"    # Change 8080 to 8090
+  - "8453:443"   # Change 8443 to 8453
+```
+
+---
+
+## ⚖️ Legal & Ethics
+
+### ⚠️ CRITICAL WARNINGS
+
+1. **Authorization Required**: ONLY use with explicit permission
+2. **Informed Consent**: Part of approved training program
+3. **Data Protection**: Comply with GDPR/CCPA
+4. **Ethical Use**: Security awareness training ONLY
+
+### Not For:
+- ❌ Actual phishing attacks
+- ❌ Unauthorized data collection
+- ❌ Malicious purposes
+
+**You are solely responsible for legal compliance.**
+
+---
+
+## 📧 Contact
+
+For issues:
+- Check logs: `docker-compose logs -f`
+- Review troubleshooting section above
+
+---
+
+## 📄 License
+
+MIT License - Use responsibly!
+
+---
+
+**Remember: With great power comes great responsibility. Use ethically!** 🎯🔐
