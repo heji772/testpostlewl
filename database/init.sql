@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS coupons (
     code VARCHAR(50),
     is_phishing BOOLEAN DEFAULT FALSE,
     image_url TEXT,
+    cta_url TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -30,8 +31,16 @@ CREATE TABLE IF NOT EXISTS analytics (
     session_id VARCHAR(255),
     coupon_id INTEGER,
     ip_address INET,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    user_agent TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE analytics
+    ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
+
+ALTER TABLE analytics
+    ADD COLUMN IF NOT EXISTS user_agent TEXT;
 
 CREATE TABLE IF NOT EXISTS auth_users (
     id SERIAL PRIMARY KEY,

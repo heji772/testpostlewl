@@ -9,14 +9,43 @@ const router = express.Router();
 
 router.post('/track', analyticsRateLimiter, auditLogger('analytics:track'), async (req, res, next) => {
   try {
+    const eventType =
+      typeof req.body.eventType === 'string' ? req.body.eventType.trim() : req.body.eventType;
+    const rawCouponId = req.body.couponId;
+    let couponId = null;
+    if (typeof rawCouponId === 'number' && Number.isInteger(rawCouponId)) {
+      couponId = rawCouponId;
+    } else if (typeof rawCouponId === 'string' && /^\d+$/.test(rawCouponId)) {
+      couponId = parseInt(rawCouponId, 10);
+    }
+
+    const hasMetadata = Object.prototype.hasOwnProperty.call(req.body, 'metadata');
+    const metadataForValidation = hasMetadata ? req.body.metadata : undefined;
+
     const payload = {
-      eventType: req.body.eventType,
+      eventType,
       sessionId: req.body.sessionId,
-      couponId: req.body.couponId,
+      couponId,
+      metadata: metadataForValidation,
       ipAddress: req.ip,
     };
+
     validateAnalyticsPayload(payload);
-    await recordEvent(payload);
+
+    const sanitizedMetadata =
+      metadataForValidation && typeof metadataForValidation === 'object' && !Array.isArray(metadataForValidation)
+        ? { ...metadataForValidation }
+        : {};
+
+    if (couponId === null && rawCouponId !== undefined && rawCouponId !== null) {
+      sanitizedMetadata.couponId = rawCouponId;
+    }
+
+    await recordEvent({
+      ...payload,
+      metadata: sanitizedMetadata,
+      userAgent: req.get('user-agent'),
+    });
     res.status(201).json({ success: true });
   } catch (error) {
     if (error.status === 400) {
