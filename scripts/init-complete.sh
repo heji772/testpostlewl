@@ -169,14 +169,14 @@ if [[ ! $ADD_SAMPLE =~ ^[Nn]$ ]]; then
     # Create sample coupons
     docker exec phishing-coupon-platform-database-1 psql -U phishuser -d phishguard << 'EOF'
 -- Sample legitimate coupons
-INSERT INTO coupons (title, brand, category, discount_text, code, is_phishing, image_url) VALUES
-('20% popusta na odjeću', 'ZARA', 'fashion', '20% OFF', 'ZARA20', false, 'https://via.placeholder.com/300x200?text=ZARA'),
-('Besplatna dostava', 'Amazon', 'shopping', 'FREE SHIPPING', 'SHIP2024', false, 'https://via.placeholder.com/300x200?text=Amazon'),
-('Kupite 2, treći gratis', 'Nike', 'sports', 'BUY 2 GET 1 FREE', 'NIKE3FOR2', false, 'https://via.placeholder.com/300x200?text=Nike');
+INSERT INTO coupons (title, brand, category, discount_text, code, is_phishing, image_url, cta_url) VALUES
+('20% popusta na odjeću', 'ZARA', 'fashion', '20% OFF', 'ZARA20', false, 'https://via.placeholder.com/300x200?text=ZARA', 'https://www.zara.com/hr/'),
+('Besplatna dostava', 'Amazon', 'shopping', 'FREE SHIPPING', 'SHIP2024', false, 'https://via.placeholder.com/300x200?text=Amazon', 'https://www.amazon.com/'),
+('Kupite 2, treći gratis', 'Nike', 'sports', 'BUY 2 GET 1 FREE', 'NIKE3FOR2', false, 'https://via.placeholder.com/300x200?text=Nike', 'https://www.nike.com/');
 
 -- Sample phishing coupon (for testing)
-INSERT INTO coupons (title, brand, category, discount_text, code, is_phishing, image_url) VALUES
-('🎁 OSVOJI iPhone 15 PRO!', 'Apple', 'electronics', 'KLIKNI ODMAH', 'SCAM123', true, 'https://via.placeholder.com/300x200?text=PHISHING');
+INSERT INTO coupons (title, brand, category, discount_text, code, is_phishing, image_url, cta_url) VALUES
+('🎁 OSVOJI iPhone 15 PRO!', 'Apple', 'electronics', 'KLIKNI ODMAH', 'SCAM123', true, 'https://via.placeholder.com/300x200?text=PHISHING', 'https://phishing.example/scam');
 
 -- Create admin user (password will be from .env)
 INSERT INTO auth_users (username, password_hash, totp_enabled, created_at, updated_at) 

@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS coupons (
     code VARCHAR(50),
     is_phishing BOOLEAN DEFAULT FALSE,
     image_url TEXT,
+    cta_url TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
