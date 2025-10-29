@@ -92,15 +92,6 @@ const isPhishingCoupon = (coupon) => {
   return coupon.type === 'phishing';
 };
 
-const SESSION_STORAGE_KEY = 'phishguard:sessionId';
-
-function generateSessionId() {
-  if (typeof window !== 'undefined' && window.crypto && window.crypto.randomUUID) {
-    return window.crypto.randomUUID();
-  }
-  return `session-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
 function Home() {
   const [coupons, setCoupons] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -112,34 +103,36 @@ function Home() {
   const [loading, setLoading] = useState(true);
   const sessionIdRef = useRef(null);
   const phishingAttempts = useRef({});
-  const sessionIdRef = useRef(null);
 
   const ensureSessionId = useCallback(() => {
     if (sessionIdRef.current) {
       return sessionIdRef.current;
     }
 
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = window.localStorage?.getItem(SESSION_STORAGE_KEY);
-        if (stored) {
-          sessionIdRef.current = stored;
-          return stored;
-        }
-        const generated = generateSessionId();
-        window.localStorage?.setItem(SESSION_STORAGE_KEY, generated);
-        sessionIdRef.current = generated;
-        return generated;
-      } catch (error) {
-        const fallbackId = generateSessionId();
-        sessionIdRef.current = fallbackId;
-        return fallbackId;
-      }
+    if (typeof window === 'undefined') {
+      const generated = generateSessionId();
+      sessionIdRef.current = generated;
+      return generated;
     }
 
-    const fallbackId = generateSessionId();
-    sessionIdRef.current = fallbackId;
-    return fallbackId;
+    try {
+      const stored = window.localStorage?.getItem(SESSION_STORAGE_KEY);
+      if (stored) {
+        sessionIdRef.current = stored;
+        return stored;
+      }
+    } catch (_error) {
+      // localStorage možda nije dostupan (npr. privatni način).
+    }
+
+    const generated = generateSessionId();
+    try {
+      window.localStorage?.setItem(SESSION_STORAGE_KEY, generated);
+    } catch (_error) {
+      // Ako localStorage nije dostupan, nastavljamo samo u memoriji.
+    }
+    sessionIdRef.current = generated;
+    return generated;
   }, []);
 
   useEffect(() => {
@@ -262,38 +255,6 @@ function Home() {
     }
     setPhishingCoupon(null);
   }, [phishingCoupon, trackEvent]);
-
-  const ensureSessionId = useCallback(() => {
-    if (sessionIdRef.current) return sessionIdRef.current;
-    if (typeof window === 'undefined') {
-      sessionIdRef.current = generateSessionId();
-      return sessionIdRef.current;
-    }
-
-    let stored = null;
-    try {
-      stored = window.localStorage.getItem(SESSION_STORAGE_KEY);
-    } catch (_error) {
-      // localStorage možda nije dostupan (npr. privatni način).
-    }
-    if (stored) {
-      sessionIdRef.current = stored;
-      return stored;
-    }
-
-    const newSessionId = generateSessionId();
-    try {
-      window.localStorage.setItem(SESSION_STORAGE_KEY, newSessionId);
-    } catch (_error) {
-      // Ako localStorage nije dostupan, nastavljamo samo u memoriji.
-    }
-    sessionIdRef.current = newSessionId;
-    return newSessionId;
-  }, []);
-
-  useEffect(() => {
-    ensureSessionId();
-  }, [ensureSessionId]);
 
   const handlePhishingSubmit = useCallback(
     async (formData) => {
