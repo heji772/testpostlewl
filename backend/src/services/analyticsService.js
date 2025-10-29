@@ -1,12 +1,17 @@
 const { Analytics } = require('../models');
 const logger = require('../utils/logger');
 
-async function recordEvent({ eventType, sessionId, couponId, ipAddress }) {
+async function recordEvent({ eventType, sessionId, couponId, metadata = {}, ipAddress, userAgent }) {
+  const safeMetadata =
+    metadata && typeof metadata === 'object' && !Array.isArray(metadata) ? metadata : {};
+
   const event = await Analytics.create({
     eventType,
     sessionId,
     couponId,
+    metadata: safeMetadata,
     ipAddress,
+    userAgent,
   });
 
   logger.info('AUDIT: Analytics event captured', {
@@ -14,6 +19,8 @@ async function recordEvent({ eventType, sessionId, couponId, ipAddress }) {
     sessionId,
     couponId,
     ipAddress,
+    userAgent,
+    metadata: safeMetadata,
   });
 
   return event.get({ plain: true });
