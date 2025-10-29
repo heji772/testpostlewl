@@ -1,4 +1,4 @@
-const { Analytics } = require('../models');
+const { AnalyticsEvent } = require('../models');
 const logger = require('../utils/logger');
 
 async function recordEvent({ eventType, sessionId, couponId, metadata = {}, ipAddress, userAgent }) {
@@ -28,10 +28,10 @@ async function recordEvent({ eventType, sessionId, couponId, metadata = {}, ipAd
 
 async function getStats() {
   const [totalViews, totalClicks, totalSubmits, totalEvents] = await Promise.all([
-    Analytics.count({ where: { eventType: 'view' } }),
-    Analytics.count({ where: { eventType: 'click' } }),
-    Analytics.count({ where: { eventType: 'submit' } }),
-    Analytics.count(),
+    AnalyticsEvent.count({ where: { eventType: 'view' } }),
+    AnalyticsEvent.count({ where: { eventType: 'click' } }),
+    AnalyticsEvent.count({ where: { eventType: 'submit' } }),
+    AnalyticsEvent.count(),
   ]);
 
   return {
@@ -42,7 +42,24 @@ async function getStats() {
   };
 }
 
+async function getOverview() {
+  const [views, clicks, submits] = await Promise.all([
+    AnalyticsEvent.count({ where: { eventType: 'view' } }),
+    AnalyticsEvent.count({ where: { eventType: 'click' } }),
+    AnalyticsEvent.count({ where: { eventType: 'submit' } }),
+  ]);
+
+  return {
+    totals: {
+      views,
+      clicks,
+      submits,
+    },
+  };
+}
+
 module.exports = {
   recordEvent,
   getStats,
+  getOverview,
 };
