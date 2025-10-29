@@ -44,6 +44,7 @@ DB_PASSWORD=YOUR_DB_PASSWORD
 # Admin login
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=YourStrongPassword123!
+ADMIN_PASSWORD_HASH=PASTE_BCRYPT_HASH_OF_ADMIN_PASSWORD
 
 # Security keys (generate new ones for every deployment)
 ENCRYPTION_KEY=64_HEX_CHARACTERS
@@ -53,11 +54,13 @@ JWT_SECRET=BASE64_SECRET
 SUBNET=172.20.0.0/24
 ```
 
-Generate fresh secrets:
+Generate fresh secrets & password hash:
 
 ```bash
 openssl rand -hex 32      # → ENCRYPTION_KEY (64 hex chars)
 openssl rand -base64 32   # → JWT_SECRET
+docker run --rm node:18-alpine \
+  node -e "console.log(require('bcrypt').hashSync(process.argv[1], 12))" "YourStrongPassword123!"  # → ADMIN_PASSWORD_HASH
 ```
 
 > **Note:** If you prefer separate DB settings, `.env.example` also includes
