@@ -47,11 +47,24 @@ function validateCouponPayload(data) {
   if (data.category && !validator.isLength(`${data.category}`, { max: 50 })) {
     errors.push('category is too long');
   }
-  if (data.discountText && !validator.isLength(`${data.discountText}`, { max: 100 })) {
+  const discountText = data.discountText ?? data.discount_text;
+  if (discountText && !validator.isLength(`${discountText}`, { max: 100 })) {
     errors.push('discountText is too long');
   }
   if (data.code && !validator.isLength(`${data.code}`, { max: 50 })) {
     errors.push('code is too long');
+  }
+  const imageUrl = data.imageUrl ?? data.image_url;
+  if (imageUrl && !validator.isLength(`${imageUrl}`, { max: 2048 })) {
+    errors.push('imageUrl is too long');
+  }
+  const ctaUrl = data.ctaUrl ?? data.cta_url ?? data.url;
+  if (ctaUrl && !validator.isLength(`${ctaUrl}`, { max: 2048 })) {
+    errors.push('ctaUrl is too long');
+  }
+  const isPhishing = data.isPhishing ?? data.is_phishing;
+  if (isPhishing !== undefined && typeof isPhishing !== 'boolean') {
+    errors.push('isPhishing must be boolean');
   }
   collectErrors(errors);
 }
