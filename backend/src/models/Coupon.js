@@ -3,48 +3,56 @@ const { DataTypes } = require('sequelize');
 module.exports = (sequelize) => {
   const Coupon = sequelize.define('Coupon', {
     id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
       primaryKey: true,
     },
     title: {
-      type: DataTypes.STRING(120),
+      type: DataTypes.STRING(255),
       allowNull: false,
     },
-    description: {
-      type: DataTypes.TEXT,
-      allowNull: false,
+    brand: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+    },
+    category: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+    },
+    discountText: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      field: 'discount_text',
     },
     code: {
-      type: DataTypes.STRING(64),
-      allowNull: false,
-      unique: true,
+      type: DataTypes.STRING(50),
+      allowNull: true,
     },
-    url: {
-      type: DataTypes.STRING(2048),
-      allowNull: false,
-    },
-    expiresAt: {
-      type: DataTypes.DATE,
-      allowNull: false,
-    },
-    isActive: {
+    isPhishing: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
-      defaultValue: true,
+      defaultValue: false,
+      field: 'is_phishing',
     },
-    createdBy: {
-      type: DataTypes.STRING(120),
+    imageUrl: {
+      type: DataTypes.TEXT,
       allowNull: true,
+      field: 'image_url',
     },
-    meta: {
-      type: DataTypes.JSONB,
+    ctaUrl: {
+      type: DataTypes.TEXT,
       allowNull: true,
-      defaultValue: {},
+      field: 'cta_url',
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+      field: 'created_at',
     },
   }, {
     tableName: 'coupons',
-    underscored: true,
+    timestamps: false,
   });
 
   return Coupon;

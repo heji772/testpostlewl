@@ -9,7 +9,7 @@ const router = express.Router();
 
 router.get('/coupons', auditLogger('public:list-coupons'), async (_req, res, next) => {
   try {
-    const coupons = await getCoupons();
+    const coupons = await getCoupons({ format: 'snake' });
     res.json({ coupons });
   } catch (error) {
     next(error);
