@@ -17,7 +17,11 @@ openssl rand -base64 32   # → JWT_SECRET
 # 3. Uredi .env (obavezno zamijeni sve placeholder vrijednosti!)
 nano .env
 # Promijeni: DATABASE_URL, DB_PASSWORD, ADMIN_USERNAME, ADMIN_PASSWORD,
-#            ENCRYPTION_KEY, JWT_SECRET, SUBNET (ako kolidira)
+#            ADMIN_PASSWORD_HASH, ENCRYPTION_KEY, JWT_SECRET,
+#            SUBNET (ako kolidira), REFRESH_TOKEN_TTL_DAYS (po želji)
+# Hash generiraš ovako:
+# docker run --rm node:18-alpine \
+#   node -e "console.log(require('bcrypt').hashSync(process.argv[1], 12))" "TvojPassword"
 
 # 4. Pokreni setup
 chmod +x scripts/*.sh

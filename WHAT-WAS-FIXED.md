@@ -213,7 +213,8 @@ openssl rand -base64 32   # Kopiraj u JWT_SECRET
 
 # 4. Uredi .env
 nano .env
-# Promijeni: DB_PASSWORD, ENCRYPTION_KEY, JWT_SECRET, ADMIN_PASSWORD
+# Promijeni: DB_PASSWORD, ENCRYPTION_KEY, JWT_SECRET, ADMIN_PASSWORD,
+#            ADMIN_PASSWORD_HASH
 
 # 5. Setup i pokreni
 chmod +x scripts/*.sh

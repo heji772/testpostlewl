@@ -54,7 +54,7 @@ bash scripts/generate-ssl.sh
 
 # 2. Create environment file
 cp .env.example .env
-# Edit .env and set secure passwords
+# Edit .env and replace every placeholder with secure values
 
 # 3. Build and start containers
 docker-compose build
@@ -63,6 +63,30 @@ docker-compose up -d
 # 4. Verify installation
 bash check-all.sh
 ```
+
+### Configure environment variables
+
+1. Open `.env` in your editor and change **every** placeholder before running Docker.
+2. Keep `DB_PASSWORD` in sync with the password inside `DATABASE_URL`.
+3. Generate secrets for the secure values:
+
+   ```bash
+   # 64 hex characters → ENCRYPTION_KEY
+   openssl rand -hex 32
+
+   # Strong base64 string → JWT_SECRET
+   openssl rand -base64 32
+
+   # Bcrypt hash of your ADMIN_PASSWORD → ADMIN_PASSWORD_HASH
+   docker run --rm node:18-alpine \
+     node -e "console.log(require('bcrypt').hashSync(process.argv[1], 12))" "YourPasswordHere"
+   ```
+
+4. Optional: Set `ADMIN_TOTP_SECRET` if you want to pre-provision 2FA (otherwise it will be generated on first login).
+
+> **Required keys in `.env`:** `DATABASE_URL`, `DB_PASSWORD`, `ADMIN_USERNAME`,
+> `ADMIN_PASSWORD`, `ADMIN_PASSWORD_HASH`, `ENCRYPTION_KEY`, `JWT_SECRET`, and
+> (optionally) `SUBNET`, `REFRESH_TOKEN_TTL_DAYS`, `ADMIN_TOTP_SECRET`.
 
 ## 🔧 Available Scripts
 

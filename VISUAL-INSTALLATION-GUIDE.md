@@ -48,16 +48,19 @@ Easy-to-follow visual guide za instalaciju projekta.
 │  .env File Editor                       │
 ├─────────────────────────────────────────┤
 │ DB_PASSWORD=SuperJakaSifra123!          │
-│ ENCRYPTION_KEY=0a1b2c3d4e5f6g7h... ← Paste ovdje
-│ JWT_SECRET=AbCdEfGhIjKlMnOpQrSt... ← Paste ovdje
+│ DATABASE_URL=postgres://phishuser:Super │
 │ ADMIN_PASSWORD=AdminPass2025!           │
-│                                          │
+│ ADMIN_PASSWORD_HASH=$2b$12$... ← Hash   │
+│ ENCRYPTION_KEY=0a1b2c3d4e5f6g7h... ← Hex│
+│ JWT_SECRET=AbCdEfGhIjKlMnOpQrSt... ← Base│
 │ 💡 Koristi jake lozinke!                │
 └─────────────────────────────────────────┘
 
 Kako editirati:
 $ cp .env.example .env
 $ nano .env  # ili vim, ili bilo koji editor
+$ docker run --rm node:18-alpine \
+    node -e "console.log(require('bcrypt').hashSync(process.argv[1], 12))" "AdminPass2025!"
 ```
 
 ---
