@@ -27,6 +27,16 @@ Analytics.init(
       type: DataTypes.STRING,
       field: 'ip_address',
     },
+    metadata: {
+      type: DataTypes.JSONB,
+      field: 'metadata',
+      defaultValue: {},
+    },
+    userAgent: {
+      type: DataTypes.STRING(512),
+      field: 'user_agent',
+      allowNull: true,
+    },
     createdAt: {
       type: DataTypes.DATE,
       field: 'created_at',

@@ -59,11 +59,33 @@ function validateCouponPayload(data) {
 function validateAnalyticsPayload(data) {
   const allowedEvents = ['view', 'click', 'submit'];
   const errors = [];
-  if (!allowedEvents.includes(data.eventType)) {
+  const eventType = `${data.eventType || ''}`.trim();
+
+  if (!eventType) {
+    errors.push('eventType is required');
+  } else if (!allowedEvents.includes(eventType)) {
     errors.push(`eventType must be one of ${allowedEvents.join(', ')}`);
   }
-  if (data.sessionId && !validator.isLength(`${data.sessionId}`, { max: 255 })) {
+
+  if (data.sessionId && !validator.isLength(`${data.sessionId}`, { min: 1, max: 255 })) {
     errors.push('sessionId is too long');
+  }
+
+  if (data.couponId !== undefined && data.couponId !== null) {
+    if (!validator.isInt(`${data.couponId}`, { allow_leading_zeroes: false })) {
+      errors.push('couponId must be a whole number');
+    }
+  }
+
+  if (data.metadata !== undefined && data.metadata !== null) {
+    if (typeof data.metadata !== 'object' || Array.isArray(data.metadata)) {
+      errors.push('metadata must be an object');
+    } else {
+      const metadataString = JSON.stringify(data.metadata);
+      if (!validator.isLength(metadataString, { max: 5000 })) {
+        errors.push('metadata is too large');
+      }
+    }
   }
   collectErrors(errors);
 }

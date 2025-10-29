@@ -48,6 +48,30 @@ const FALLBACK_COUPONS = [
   },
 ];
 
+const EVENT_TYPE_MAP = {
+  phishing_coupon_opened: 'view',
+  phishing_modal_closed: 'click',
+  phishing_repeat_warning: 'view',
+  phishing_education_shown: 'view',
+  hero_cta_click: 'click',
+  coupon_redeem_click: 'click',
+  header_navigation: 'click',
+  phishing_submission: 'submit',
+};
+
+const SESSION_STORAGE_KEY = 'phishguard:sessionId';
+
+const generateSessionId = () => {
+  if (typeof window !== 'undefined' && window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  if (typeof globalThis !== 'undefined' && globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+  const randomPart = Math.random().toString(36).slice(2, 10);
+  return `pg-${Date.now().toString(36)}-${randomPart}`;
+};
+
 const normaliseCategory = (value) => {
   if (!value) return 'Ostalo';
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -77,15 +101,79 @@ function Home() {
   const [showEducation, setShowEducation] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const sessionIdRef = useRef(null);
   const phishingAttempts = useRef({});
 
-  const trackEvent = useCallback((eventName, payload = {}) => {
-    fetch('/api/analytics/track', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event: eventName, data: payload }),
-    }).catch(() => {});
+  const ensureSessionId = useCallback(() => {
+    if (sessionIdRef.current) {
+      return sessionIdRef.current;
+    }
+
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = window.localStorage?.getItem(SESSION_STORAGE_KEY);
+        if (stored) {
+          sessionIdRef.current = stored;
+          return stored;
+        }
+        const generated = generateSessionId();
+        window.localStorage?.setItem(SESSION_STORAGE_KEY, generated);
+        sessionIdRef.current = generated;
+        return generated;
+      } catch (error) {
+        const fallbackId = generateSessionId();
+        sessionIdRef.current = fallbackId;
+        return fallbackId;
+      }
+    }
+
+    const fallbackId = generateSessionId();
+    sessionIdRef.current = fallbackId;
+    return fallbackId;
   }, []);
+
+  useEffect(() => {
+    ensureSessionId();
+  }, [ensureSessionId]);
+
+  const trackEvent = useCallback(
+    (eventName, payload = {}) => {
+      const eventType = EVENT_TYPE_MAP[eventName] || 'view';
+      const sessionId = ensureSessionId();
+      const payloadData = payload && typeof payload === 'object' ? payload : {};
+      const { couponId: rawCouponId, ...restPayload } = payloadData;
+      let couponId = null;
+
+      if (typeof rawCouponId === 'number' && Number.isFinite(rawCouponId)) {
+        couponId = Math.trunc(rawCouponId);
+      } else if (typeof rawCouponId === 'string' && /^\d+$/.test(rawCouponId)) {
+        couponId = parseInt(rawCouponId, 10);
+      }
+
+      const metadata = {
+        eventName,
+        ...restPayload,
+      };
+
+      if (couponId === null && rawCouponId !== undefined && rawCouponId !== null && rawCouponId !== '') {
+        metadata.couponId = rawCouponId;
+      }
+
+      const body = {
+        eventType,
+        sessionId,
+        couponId,
+        metadata,
+      };
+
+      fetch('/api/analytics/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).catch(() => {});
+    },
+    [ensureSessionId],
+  );
 
   useEffect(() => {
     const loadCoupons = async () => {
