@@ -47,7 +47,7 @@ async function saveVictim({
 async function listVictims() {
   const victims = await Victim.findAll({
     attributes: ['id', 'sessionId', 'couponId', 'ipAddress', 'createdAt'],
-    order: [['created_at', 'DESC']],
+    order: [['createdAt', 'DESC']],
   });
 
   return victims.map((victim) => victim.get({ plain: true }));
