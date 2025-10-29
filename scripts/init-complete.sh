@@ -100,6 +100,27 @@ EOF
     read -p "Press Enter to continue..."
 fi
 
+hash_admin_password() {
+    if command -v node >/dev/null 2>&1; then
+        if NODE_PATH="$(pwd)/backend/node_modules" node -e "console.log(require('bcrypt').hashSync(process.argv[1], 12))" "$ADMIN_PASSWORD"; then
+            return 0
+        fi
+    fi
+
+    if ! command -v docker >/dev/null 2>&1; then
+        echo ""
+        return 0
+    fi
+
+    if docker ps --format '{{.Names}}' | grep -q '^phishing-coupon-platform-backend-1$'; then
+        if docker exec phishing-coupon-platform-backend-1 node -e "console.log(require('bcrypt').hashSync(process.argv[1], 12))" "$ADMIN_PASSWORD"; then
+            return 0
+        fi
+    fi
+
+    docker run --rm node:18-alpine node -e "console.log(require('bcrypt').hashSync(process.argv[1], 12))" "$ADMIN_PASSWORD"
+}
+
 # 3. Check for port conflicts
 echo -e "\n${BLUE}[3/5] Checking for port conflicts...${NC}"
 PORTS_IN_USE=""
@@ -167,7 +188,13 @@ if [[ ! $ADD_SAMPLE =~ ^[Nn]$ ]]; then
     echo -e "${BLUE}Creating sample data...${NC}"
     
     # Create sample coupons
-    docker exec phishing-coupon-platform-database-1 psql -U phishuser -d phishguard << 'EOF'
+    HASHED_ADMIN_PASSWORD=$(hash_admin_password)
+    if [ -z "$HASHED_ADMIN_PASSWORD" ]; then
+        echo -e "${RED}❌ Failed to generate bcrypt hash for admin password${NC}"
+        exit 1
+    fi
+
+    docker exec phishing-coupon-platform-database-1 psql -U phishuser -d phishguard << EOF
 -- Sample legitimate coupons
 INSERT INTO coupons (title, brand, category, discount_text, code, is_phishing, image_url, cta_url) VALUES
 ('20% popusta na odjeću', 'ZARA', 'fashion', '20% OFF', 'ZARA20', false, 'https://via.placeholder.com/300x200?text=ZARA', 'https://www.zara.com/hr/'),
@@ -179,8 +206,8 @@ INSERT INTO coupons (title, brand, category, discount_text, code, is_phishing, i
 ('🎁 OSVOJI iPhone 15 PRO!', 'Apple', 'electronics', 'KLIKNI ODMAH', 'SCAM123', true, 'https://via.placeholder.com/300x200?text=PHISHING', 'https://phishing.example/scam');
 
 -- Create admin user (password will be from .env)
-INSERT INTO auth_users (username, password_hash, totp_enabled, created_at, updated_at) 
-VALUES ('admin', '$2b$10$placeholder', false, NOW(), NOW())
+INSERT INTO auth_users (username, password_hash, totp_enabled, created_at, updated_at)
+VALUES ('admin', '${HASHED_ADMIN_PASSWORD}', false, NOW(), NOW())
 ON CONFLICT (username) DO NOTHING;
 
 EOF

@@ -3,8 +3,10 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const { ValidationError, UniqueConstraintError, DatabaseError } = require('sequelize');
+const bcrypt = require('bcrypt');
 const logger = require('./src/utils/logger');
 const { sequelize } = require('./src/models');
+const AuthUser = require('./src/models/AuthUser');
 const { loginRateLimiter } = require('./src/middleware/rateLimiters');
 const authenticateJWT = require('./src/middleware/authenticate');
 
@@ -16,6 +18,48 @@ const analyticsRoutes = require('./src/routes/analytics');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const parsedSaltRounds = Number.parseInt(process.env.BCRYPT_SALT_ROUNDS || '12', 10);
+const SALT_ROUNDS = Number.isNaN(parsedSaltRounds) ? 12 : parsedSaltRounds;
+
+async function ensureAdminUser() {
+  const username = process.env.ADMIN_USERNAME;
+  const password = process.env.ADMIN_PASSWORD;
+
+  if (!username || !password) {
+    try {
+      logger.warn('ADMIN_USERNAME or ADMIN_PASSWORD is missing. Skipping admin bootstrap.');
+    } catch {}
+    return;
+  }
+
+  try {
+    const existingUser = await AuthUser.findOne({ where: { username } });
+    const passwordMatches = existingUser
+      ? await bcrypt.compare(password, existingUser.passwordHash)
+      : false;
+
+    if (!existingUser) {
+      const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+      await AuthUser.create({ username, passwordHash, totpEnabled: false });
+      try {
+        logger.info('Created default admin account from environment variables.');
+      } catch {}
+      return;
+    }
+
+    if (!passwordMatches) {
+      const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+      await existingUser.update({ passwordHash });
+      try {
+        logger.info('Synchronized admin password hash with environment variables.');
+      } catch {}
+    }
+  } catch (err) {
+    try {
+      logger.error(`Failed to ensure admin user exists: ${err.message}`);
+    } catch {}
+  }
+}
 
 function sanitizeForAudit(body) {
   if (!body || typeof body !== 'object') {
@@ -115,6 +159,7 @@ async function start() {
   try {
     await sequelize.authenticate();
     await sequelize.sync();
+    await ensureAdminUser();
     app.listen(PORT, '0.0.0.0', () => {
       try { logger.info(`Backend server running on port ${PORT}`); } catch {}
     });
