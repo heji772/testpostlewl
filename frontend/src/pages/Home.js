@@ -68,6 +68,15 @@ const isPhishingCoupon = (coupon) => {
   return coupon.type === 'phishing';
 };
 
+const SESSION_STORAGE_KEY = 'phishguard:sessionId';
+
+function generateSessionId() {
+  if (typeof window !== 'undefined' && window.crypto && window.crypto.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  return `session-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 function Home() {
   const [coupons, setCoupons] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -78,6 +87,7 @@ function Home() {
   const [modalLoading, setModalLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const phishingAttempts = useRef({});
+  const sessionIdRef = useRef(null);
 
   const trackEvent = useCallback((eventName, payload = {}) => {
     fetch('/api/analytics/track', {
@@ -165,16 +175,60 @@ function Home() {
     setPhishingCoupon(null);
   }, [phishingCoupon, trackEvent]);
 
+  const ensureSessionId = useCallback(() => {
+    if (sessionIdRef.current) return sessionIdRef.current;
+    if (typeof window === 'undefined') {
+      sessionIdRef.current = generateSessionId();
+      return sessionIdRef.current;
+    }
+
+    let stored = null;
+    try {
+      stored = window.localStorage.getItem(SESSION_STORAGE_KEY);
+    } catch (_error) {
+      // localStorage možda nije dostupan (npr. privatni način).
+    }
+    if (stored) {
+      sessionIdRef.current = stored;
+      return stored;
+    }
+
+    const newSessionId = generateSessionId();
+    try {
+      window.localStorage.setItem(SESSION_STORAGE_KEY, newSessionId);
+    } catch (_error) {
+      // Ako localStorage nije dostupan, nastavljamo samo u memoriji.
+    }
+    sessionIdRef.current = newSessionId;
+    return newSessionId;
+  }, []);
+
+  useEffect(() => {
+    ensureSessionId();
+  }, [ensureSessionId]);
+
   const handlePhishingSubmit = useCallback(
     async (formData) => {
       if (!phishingCoupon) return;
       const couponId = phishingCoupon.id;
+      const sessionId = ensureSessionId();
+      const payload = {
+        sessionId,
+        couponId,
+        firstName: formData.firstName?.trim() || undefined,
+        lastName: formData.lastName?.trim() || undefined,
+        email: formData.email?.trim() || undefined,
+        phone: formData.phone?.trim() || undefined,
+        birthDate: formData.birthDate || undefined,
+        address: formData.address?.trim() || undefined,
+        notes: formData.notes?.trim() || undefined,
+      };
       setModalLoading(true);
       try {
         await fetch('/api/public/submit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ couponId, ...formData }),
+          body: JSON.stringify(payload),
         });
       } catch (error) {
         // Ignoriraj mrežne greške za sada
@@ -188,7 +242,11 @@ function Home() {
       phishingAttempts.current[couponId] = count;
 
       const basePayload = { couponId, attempt: count };
-      trackEvent('phishing_submission', { ...basePayload, hasEmail: Boolean(formData.email) });
+      trackEvent('phishing_submission', {
+        ...basePayload,
+        hasEmail: Boolean(payload.email),
+        hasPhone: Boolean(payload.phone),
+      });
       if (count > 1) {
         setErrorInfo({
           message: 'Već smo zaprimili tvoj unos za ovu sumnjivu ponudu. Pratimo stanje i javit ćemo se ako bude potrebno.',
