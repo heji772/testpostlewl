@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const jwt = require('jsonwebtoken');
 const { ValidationError, UniqueConstraintError, DatabaseError } = require('sequelize');
 const logger = require('./src/utils/logger');
 const { sequelize } = require('./src/models');
