@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const { ValidationError, UniqueConstraintError, DatabaseError } = require('sequelize');
 const logger = require('./src/utils/logger');
 const { sequelize } = require('./src/models');
+const { loginRateLimiter } = require('./src/middleware/rateLimiters');
 
 // Routes
 const publicRoutes = require('./src/routes/public');
@@ -72,14 +73,6 @@ app.use(auditMiddleware);
 // Health endpoint (tvoj check traži string "ok")
 app.get('/health', (_req, res) => res.send('ok'));
 
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many login attempts. Please try again later.' },
-});
-
 const authenticateJWT = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
@@ -106,7 +99,7 @@ const authenticateJWT = (req, res, next) => {
 
 // API routes
 app.use('/api/public', publicRoutes);
-app.use('/api/auth/login', loginLimiter);
+app.use('/api/auth/login', loginRateLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', authenticateJWT, adminRoutes);
 app.use('/api/analytics', analyticsRoutes);
