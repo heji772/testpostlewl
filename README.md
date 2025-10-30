@@ -60,6 +60,11 @@ cp .env.example .env
 docker-compose build
 docker-compose up -d
 
+# ❗️Make sure your `.env` includes valid values for `JWT_SECRET`, `ENCRYPTION_KEY`,
+# and `REFRESH_TOKEN_TTL_DAYS` (plus `ADMIN_TOTP_SECRET` if you are pre-provisioning
+# 2FA) before running `docker-compose up`. Without these secrets the backend APIs
+# will fail to start correctly.
+
 # 4. Verify installation
 bash check-all.sh
 ```
