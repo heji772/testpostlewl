@@ -409,10 +409,10 @@ docker-compose logs -f
 docker ps -a
 
 # Database access
-docker exec -it phishing-coupon-platform-database-1 psql -U phishuser -d phishguard
+docker-compose exec database psql -U phishuser -d phishguard
 
 # Backend shell
-docker exec -it blabla-main-backend-1 /bin/sh
+docker-compose exec backend /bin/sh
 ```
 
 ---
