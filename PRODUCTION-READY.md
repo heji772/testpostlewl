@@ -221,6 +221,10 @@ git pull origin main
 
 # 2. Update environment variables
 nano .env
+# Populate all security-sensitive values before continuing, especially `JWT_SECRET`,
+# `ENCRYPTION_KEY`, and `REFRESH_TOKEN_TTL_DAYS` (include `ADMIN_TOTP_SECRET` if you
+# plan to pre-provision 2FA). The backend will not accept login or submission
+# requests without these secrets in place.
 
 # 3. Backup current database
 bash scripts/backup-enhanced.sh

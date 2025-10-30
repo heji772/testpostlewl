@@ -26,6 +26,10 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS}
+      ADMIN_TOTP_SECRET: ${ADMIN_TOTP_SECRET:-}
     depends_on:
       database:
         condition: service_healthy
