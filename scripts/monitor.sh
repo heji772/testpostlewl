@@ -10,6 +10,33 @@ RED='\033[0;31m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+PROJECT_DIR=$(cd "$SCRIPT_DIR/.." && pwd)
+cd "$PROJECT_DIR" || exit 1
+PROJECT_NAME=${COMPOSE_PROJECT_NAME:-$(basename "$PROJECT_DIR")}
+
+resolve_compose_cmd() {
+    if [ -n "$COMPOSE_CMD" ]; then
+        read -r -a cmd <<< "$COMPOSE_CMD"
+        echo "${cmd[@]}"
+        return
+    fi
+
+    if command -v docker-compose >/dev/null 2>&1; then
+        echo "docker-compose"
+        return
+    fi
+
+    if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+        echo "docker compose"
+        return
+    fi
+
+    echo ""
+}
+
+COMPOSE_CMD_RESOLVED=$(resolve_compose_cmd)
+
 # Function to get container status
 get_container_status() {
     local container=$1
@@ -74,19 +101,51 @@ while true; do
     echo -e "${BLUE}━━━ Container Status ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     printf "%-30s %-20s %s\n" "Container" "Status" "Resources (CPU | Memory)"
     echo "────────────────────────────────────────────────────────────"
-    
-    containers=(
-        "phishing-coupon-platform-database-1:Database"
-        "blabla-main-backend-1:Backend API"
-        "blabla-main-frontend-1:Frontend"
-        "blabla-main-admin-panel-1:Admin Panel"
-        "blabla-main-nginx-1:Nginx Gateway"
+
+    compose_cmd=()
+    if [ -n "$COMPOSE_CMD_RESOLVED" ]; then
+        read -r -a compose_cmd <<< "$COMPOSE_CMD_RESOLVED"
+    fi
+
+    compose_services=()
+    if [ ${#compose_cmd[@]} -gt 0 ]; then
+        while IFS= read -r service; do
+            if [ -n "$service" ]; then
+                compose_services+=("$service")
+            fi
+        done < <("${compose_cmd[@]}" ps --services 2>/dev/null)
+    fi
+
+    if [ ${#compose_services[@]} -eq 0 ]; then
+        compose_services=(database backend frontend admin-panel nginx)
+    fi
+
+    declare -A display_names=(
+        [database]="Database"
+        [backend]="Backend API"
+        [frontend]="Frontend"
+        [admin-panel]="Admin Panel"
+        [nginx]="Nginx Gateway"
     )
-    
-    for container_info in "${containers[@]}"; do
-        IFS=':' read -r container_name display_name <<< "$container_info"
-        status=$(get_container_status "$container_name")
-        stats=$(get_container_stats "$container_name")
+
+    for service in "${compose_services[@]}"; do
+        container_identifier=""
+        if [ ${#compose_cmd[@]} -gt 0 ]; then
+            container_identifier=$("${compose_cmd[@]}" ps -q "$service" 2>/dev/null)
+        fi
+
+        if [ -z "$container_identifier" ]; then
+            if [ "$service" = "database" ]; then
+                container_identifier="phishing-coupon-platform-database-1"
+            else
+                container_identifier="${PROJECT_NAME}-${service}-1"
+            fi
+        fi
+
+        display_name=${display_names[$service]:-$service}
+
+        status=$(get_container_status "$container_identifier")
+        stats=$(get_container_stats "$container_identifier")
         printf "%-30s %-20s %s\n" "$display_name" "$status" "$stats"
     done
     
@@ -139,7 +198,13 @@ while true; do
     # Recent Logs
     echo ""
     echo -e "${BLUE}━━━ Recent Activity (Last 5 log entries) ━━━━━━━━━━━━━━━${NC}"
-    docker-compose logs --tail=5 --no-log-prefix backend 2>/dev/null | tail -5 | while read line; do
+    if [ ${#compose_cmd[@]} -gt 0 ]; then
+        log_source=$("${compose_cmd[@]}" logs --tail=5 --no-log-prefix backend 2>/dev/null)
+    else
+        log_source=$(docker logs --tail 5 "${PROJECT_NAME}-backend-1" 2>/dev/null)
+    fi
+
+    printf '%s\n' "$log_source" | tail -5 | while read -r line; do
         if echo "$line" | grep -qi "error"; then
             echo -e "${RED}$line${NC}"
         elif echo "$line" | grep -qi "warn"; then
